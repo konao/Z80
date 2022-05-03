@@ -5,6 +5,7 @@
 const PIXI = require('pixi.js');
 const $ = require('jquery');
 // const { Game } = require('./game');
+const { Z80 } = require('./z80emu');
 
 // let game = new Game();
 let bPause = false;
@@ -43,6 +44,9 @@ loader.load((loader, resources) => {
     //         game.gameLoop(PIXI, container);
     //     }
     // });
+
+    let z80 = new Z80();
+    z80.test1();
 });
 
 let g_width;
