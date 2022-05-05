@@ -27,6 +27,56 @@ const LD_NN_A = 0x32;
 
 // 16bitロードグループ
 
+// 8bit算術、論理演算グループ
+const ADD_A_R = 0x80;
+const ADD_A_N = 0xc6;
+const ADD_A_HL = 0x86;
+const ADD_A_IX = 0xdd86;
+const ADD_A_IY = 0xfd86;
+const ADC_A_R = 0x88;
+const ADC_A_N = 0xce;
+const ADC_A_HL = 0x8e;
+const ADC_A_IX = 0xdd8e;
+const ADC_A_IY = 0xfd8e;
+const SUB_A_R = 0x90;
+const SUB_A_N = 0xd6;
+const SUB_A_HL = 0x96;
+const SUB_A_IX = 0xdd96;
+const SUB_A_IY = 0xfd96;
+const SBC_A_R = 0x98;
+const SBC_A_N = 0xde;
+const SBC_A_HL = 0x9e;
+const SBC_A_IX = 0xdd9e;
+const SBC_A_IY = 0xfd9e;
+const AND_A_R = 0xa0;
+const AND_A_N = 0xe6;
+const AND_A_HL = 0xa6;
+const AND_A_IX = 0xdda6;
+const AND_A_IY = 0xfda6;
+const OR_A_R = 0xb0;
+const OR_A_N = 0xf6;
+const OR_A_HL = 0xb6;
+const OR_A_IX = 0xddb6;
+const OR_A_IY = 0xfdb6;
+const XOR_A_R = 0xa8;
+const XOR_A_N = 0xee;
+const XOR_A_HL = 0xae;
+const XOR_A_IX = 0xddae;
+const XOR_A_IY = 0xfdae;
+const CP_A_R = 0xb8;
+const CP_A_N = 0xfe;
+const CP_A_HL = 0xbe;
+const CP_A_IX = 0xddbe;
+const CP_A_IY = 0xfdbe;
+const INC_A_R = 0x04;
+const INC_A_HL = 0x34;
+const INC_A_IX = 0xdd34;
+const INC_A_IY = 0xfd34;
+const DEC_A_R = 0x05;
+const DEC_A_HL = 0x35;
+const DEC_A_IX = 0xdd35;
+const DEC_A_IY = 0xfd35;
+
 class Z80 {
     constructor() {
         this.reg8 = new Uint8Array(8);
@@ -68,6 +118,9 @@ class Z80 {
         const opCode1 = this.memory[PC];
         const opCode2 = this.memory[PC+1];
 
+        // -----------------------------------
+        //  8bitロードグループ
+        // -----------------------------------
         if ((opCode1 & 0xc0) === 0x40) {
             // LD r1, r2
             const dest = xrctReg8(opCode1, 3);
@@ -250,6 +303,473 @@ class Z80 {
                 cycles: 13
             }
         }
+        // -----------------------------------
+        // 8bit算術、論理演算グループ
+        // -----------------------------------
+        else if ((opCode1 & 0xf8) === 0x80) {
+            // ADD A, r
+            const src = xrctReg8(opCode1, 0);
+            return {
+                inst: ADD_A_R,
+                src,
+                nInst: 1,
+                cycles: 4
+            }
+        }
+        else if (opCode1 === 0xc6) {
+            // ADD A, n
+            const arg1 = this.memory[PC+1];
+            return {
+                inst: ADD_A_N,
+                src: arg1,
+                nInst: 2,
+                cycles: 7
+            }
+        }
+        else if (opCode1 === 0x86) {
+            // ADD A, (HL)
+            return {
+                inst: ADD_A_HL,
+                nInst: 2,
+                cycles: 7
+            }
+        }
+        else if ((opCode1 === 0xdd) && (opCode2 === 0x86)) {
+            // ADD A, (IX+d)
+            const arg1 = this.memory[PC+2];
+            return {
+                inst: ADD_A_IX,
+                d: arg1,
+                nInst: 3,
+                cycles: 19
+            }
+        }
+        else if ((opCode1 === 0xfd) && (opCode2 === 0x86)) {
+            // ADD A, (IY+d)
+            const arg1 = this.memory[PC+2];
+            return {
+                inst: ADD_A_IY,
+                d: arg1,
+                nInst: 3,
+                cycles: 19
+            }
+        }
+        else if ((opCode1 & 0xf8) === 0x88) {
+            // ADC A, r
+            const src = xrctReg8(opCode1, 0);
+            return {
+                inst: ADC_A_R,
+                src,
+                nInst: 1,
+                cycles: 4
+            }
+        }
+        else if (opCode1 === 0xce) {
+            // ADC A, n
+            const arg1 = this.memory[PC+1];
+            return {
+                inst: ADC_A_N,
+                src: arg1,
+                nInst: 2,
+                cycles: 7
+            }
+        }
+        else if (opCode1 === 0x8e) {
+            // ADC A, (HL)
+            return {
+                inst: ADC_A_HL,
+                nInst: 2,
+                cycles: 7
+            }
+        }
+        else if ((opCode1 === 0xdd) && (opCode2 === 0x8e)) {
+            // ADC A, (IX+d)
+            const arg1 = this.memory[PC+2];
+            return {
+                inst: ADC_A_IX,
+                d: arg1,
+                nInst: 3,
+                cycles: 19
+            }
+        }
+        else if ((opCode1 === 0xfd) && (opCode2 === 0x8e)) {
+            // ADC A, (IY+d)
+            const arg1 = this.memory[PC+2];
+            return {
+                inst: ADC_A_IY,
+                d: arg1,
+                nInst: 3,
+                cycles: 19
+            }
+        }
+        else if ((opCode1 & 0xf8) === 0x90) {
+            // SUB A, r
+            const src = xrctReg8(opCode1, 0);
+            return {
+                inst: SUB_A_R,
+                src,
+                nInst: 1,
+                cycles: 4
+            }
+        }
+        else if (opCode1 === 0xd6) {
+            // SUB A, n
+            const arg1 = this.memory[PC+1];
+            return {
+                inst: SUB_A_N,
+                src: arg1,
+                nInst: 2,
+                cycles: 7
+            }
+        }
+        else if (opCode1 === 0x96) {
+            // SUB A, (HL)
+            return {
+                inst: SUB_A_HL,
+                nInst: 2,
+                cycles: 7
+            }
+        }
+        else if ((opCode1 === 0xdd) && (opCode2 === 0x96)) {
+            // SUB A, (IX+d)
+            const arg1 = this.memory[PC+2];
+            return {
+                inst: SUB_A_IX,
+                d: arg1,
+                nInst: 3,
+                cycles: 19
+            }
+        }
+        else if ((opCode1 === 0xfd) && (opCode2 === 0x96)) {
+            // SUB A, (IY+d)
+            const arg1 = this.memory[PC+2];
+            return {
+                inst: SUB_A_IY,
+                d: arg1,
+                nInst: 3,
+                cycles: 19
+            }
+        }
+        else if ((opCode1 & 0xf8) === 0x98) {
+            // SBC A, r
+            const src = xrctReg8(opCode1, 0);
+            return {
+                inst: SBC_A_R,
+                src,
+                nInst: 1,
+                cycles: 4
+            }
+        }
+        else if (opCode1 === 0xde) {
+            // SBC A, n
+            const arg1 = this.memory[PC+1];
+            return {
+                inst: SBC_A_N,
+                src: arg1,
+                nInst: 2,
+                cycles: 7
+            }
+        }
+        else if (opCode1 === 0x9e) {
+            // SBC A, (HL)
+            return {
+                inst: SBC_A_HL,
+                nInst: 2,
+                cycles: 7
+            }
+        }
+        else if ((opCode1 === 0xdd) && (opCode2 === 0x9e)) {
+            // SBC A, (IX+d)
+            const arg1 = this.memory[PC+2];
+            return {
+                inst: SBC_A_IX,
+                d: arg1,
+                nInst: 3,
+                cycles: 19
+            }
+        }
+        else if ((opCode1 === 0xfd) && (opCode2 === 0x9e)) {
+            // SBC A, (IY+d)
+            const arg1 = this.memory[PC+2];
+            return {
+                inst: SBC_A_IY,
+                d: arg1,
+                nInst: 3,
+                cycles: 19
+            }
+        }
+        else if ((opCode1 & 0xf8) === 0xa0) {
+            // AND A, r
+            const src = xrctReg8(opCode1, 0);
+            return {
+                inst: AND_A_R,
+                src,
+                nInst: 1,
+                cycles: 4
+            }
+        }
+        else if (opCode1 === 0xe6) {
+            // AND A, n
+            const arg1 = this.memory[PC+1];
+            return {
+                inst: AND_A_N,
+                src: arg1,
+                nInst: 2,
+                cycles: 7
+            }
+        }
+        else if (opCode1 === 0xa6) {
+            // AND A, (HL)
+            return {
+                inst: AND_A_HL,
+                nInst: 2,
+                cycles: 7
+            }
+        }
+        else if ((opCode1 === 0xdd) && (opCode2 === 0xa6)) {
+            // AND A, (IX+d)
+            const arg1 = this.memory[PC+2];
+            return {
+                inst: AND_A_IX,
+                d: arg1,
+                nInst: 3,
+                cycles: 19
+            }
+        }
+        else if ((opCode1 === 0xfd) && (opCode2 === 0xa6)) {
+            // AND A, (IY+d)
+            const arg1 = this.memory[PC+2];
+            return {
+                inst: AND_A_IY,
+                d: arg1,
+                nInst: 3,
+                cycles: 19
+            }
+        }
+        else if ((opCode1 & 0xf8) === 0xb0) {
+            // OR A, r
+            const src = xrctReg8(opCode1, 0);
+            return {
+                inst: OR_A_R,
+                src,
+                nInst: 1,
+                cycles: 4
+            }
+        }
+        else if (opCode1 === 0xf6) {
+            // OR A, n
+            const arg1 = this.memory[PC+1];
+            return {
+                inst: OR_A_N,
+                src: arg1,
+                nInst: 2,
+                cycles: 7
+            }
+        }
+        else if (opCode1 === 0xb6) {
+            // OR A, (HL)
+            return {
+                inst: OR_A_HL,
+                nInst: 2,
+                cycles: 7
+            }
+        }
+        else if ((opCode1 === 0xdd) && (opCode2 === 0xb6)) {
+            // OR A, (IX+d)
+            const arg1 = this.memory[PC+2];
+            return {
+                inst: OR_A_IX,
+                d: arg1,
+                nInst: 3,
+                cycles: 19
+            }
+        }
+        else if ((opCode1 === 0xfd) && (opCode2 === 0xb6)) {
+            // OR A, (IY+d)
+            const arg1 = this.memory[PC+2];
+            return {
+                inst: OR_A_IY,
+                d: arg1,
+                nInst: 3,
+                cycles: 19
+            }
+        }
+        else if ((opCode1 & 0xf8) === 0xa8) {
+            // XOR A, r
+            const src = xrctReg8(opCode1, 0);
+            return {
+                inst: XOR_A_R,
+                src,
+                nInst: 1,
+                cycles: 4
+            }
+        }
+        else if (opCode1 === 0xee) {
+            // XOR A, n
+            const arg1 = this.memory[PC+1];
+            return {
+                inst: XOR_A_N,
+                src: arg1,
+                nInst: 2,
+                cycles: 7
+            }
+        }
+        else if (opCode1 === 0xae) {
+            // XOR A, (HL)
+            return {
+                inst: XOR_A_HL,
+                nInst: 2,
+                cycles: 7
+            }
+        }
+        else if ((opCode1 === 0xdd) && (opCode2 === 0xae)) {
+            // XOR A, (IX+d)
+            const arg1 = this.memory[PC+2];
+            return {
+                inst: XOR_A_IX,
+                d: arg1,
+                nInst: 3,
+                cycles: 19
+            }
+        }
+        else if ((opCode1 === 0xfd) && (opCode2 === 0xae)) {
+            // XOR A, (IY+d)
+            const arg1 = this.memory[PC+2];
+            return {
+                inst: XOR_A_IY,
+                d: arg1,
+                nInst: 3,
+                cycles: 19
+            }
+        }
+        else if ((opCode1 & 0xf8) === 0xb8) {
+            // CP A, r
+            const src = xrctReg8(opCode1, 0);
+            return {
+                inst: CP_A_R,
+                src,
+                nInst: 1,
+                cycles: 4
+            }
+        }
+        else if (opCode1 === 0xfe) {
+            // CP A, n
+            const arg1 = this.memory[PC+1];
+            return {
+                inst: CP_A_N,
+                src: arg1,
+                nInst: 2,
+                cycles: 7
+            }
+        }
+        else if (opCode1 === 0xbe) {
+            // CP A, (HL)
+            return {
+                inst: CP_A_HL,
+                nInst: 2,
+                cycles: 7
+            }
+        }
+        else if ((opCode1 === 0xdd) && (opCode2 === 0xbe)) {
+            // CP A, (IX+d)
+            const arg1 = this.memory[PC+2];
+            return {
+                inst: CP_A_IX,
+                d: arg1,
+                nInst: 3,
+                cycles: 19
+            }
+        }
+        else if ((opCode1 === 0xfd) && (opCode2 === 0xbe)) {
+            // CP A, (IY+d)
+            const arg1 = this.memory[PC+2];
+            return {
+                inst: CP_A_IY,
+                d: arg1,
+                nInst: 3,
+                cycles: 19
+            }
+        }
+        else if ((opCode1 & 0xc7) === 0x04) {
+            // INC A, r
+            const src = xrctReg8(opCode1, 3);
+            return {
+                inst: INC_A_R,
+                src,
+                nInst: 1,
+                cycles: 4
+            }
+        }
+        else if (opCode1 === 0x34) {
+            // INC A, (HL)
+            return {
+                inst: INC_A_HL,
+                nInst: 2,
+                cycles: 7
+            }
+        }
+        else if ((opCode1 === 0xdd) && (opCode2 === 0x34)) {
+            // INC A, (IX+d)
+            const arg1 = this.memory[PC+2];
+            return {
+                inst: INC_A_IX,
+                d: arg1,
+                nInst: 3,
+                cycles: 19
+            }
+        }
+        else if ((opCode1 === 0xfd) && (opCode2 === 0x34)) {
+            // INC A, (IY+d)
+            const arg1 = this.memory[PC+2];
+            return {
+                inst: INC_A_IY,
+                d: arg1,
+                nInst: 3,
+                cycles: 19
+            }
+        }
+        else if ((opCode1 & 0xc7) === 0x05) {
+            // DEC A, r
+            const src = xrctReg8(opCode1, 3);
+            return {
+                inst: DEC_A_R,
+                src,
+                nInst: 1,
+                cycles: 4
+            }
+        }
+        else if (opCode1 === 0x35) {
+            // DEC A, (HL)
+            return {
+                inst: DEC_A_HL,
+                nInst: 2,
+                cycles: 7
+            }
+        }
+        else if ((opCode1 === 0xdd) && (opCode2 === 0x35)) {
+            // DEC A, (IX+d)
+            const arg1 = this.memory[PC+2];
+            return {
+                inst: DEC_A_IX,
+                d: arg1,
+                nInst: 3,
+                cycles: 19
+            }
+        }
+        else if ((opCode1 === 0xfd) && (opCode2 === 0x35)) {
+            // DEC A, (IY+d)
+            const arg1 = this.memory[PC+2];
+            return {
+                inst: DEC_A_IY,
+                d: arg1,
+                nInst: 3,
+                cycles: 19
+            }
+        }
+
+        // -----------------------------------
+        // その他
+        // -----------------------------------
         else if (opCode1 === 0x00) {
             return {
                 inst: NOP,
