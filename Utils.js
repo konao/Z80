@@ -21,6 +21,27 @@ const xrctReg8 = (x, dsp) => {
     return reg & 0x07;
 }
 
+// xから16bitレジスタのビットパターンを取り出す
+// @param dsp 右シフトビット数
+const xrctReg16 = (x, dsp) => {
+    const reg = x >> dsp;
+    return reg & 0x03;
+}
+
+// xから分岐条件のビットパターンを取り出す
+// @param dsp 右シフトビット数
+const xrctCC = (x, dsp) => {
+    const reg = x >> dsp;
+    return reg & 0x07;
+}
+
+// xからRST命令専用のビットパターンを取り出す
+// @param dsp 右シフトビット数
+const xrctRST = (x, dsp) => {
+    const reg = x >> dsp;
+    return reg & 0x07;
+}
+
 const toRegName = (x) => {
     switch (x) {
         case A: { return 'A' }
@@ -38,5 +59,8 @@ module.exports = {
     toHex4,
     A, B, C, D, E, H, L,
     xrctReg8,
+    xrctReg16,
+    xrctCC,
+    xrctRST,
     toRegName
 }
