@@ -218,6 +218,8 @@ class Z80 {
         this.PC = 0x0000;
         this.SP = 0x0000;
         this.FLG = 0x00;
+        this.IX = 0x0000;
+        this.IY = 0x0000;
         this.memory = new Uint8Array(0x10000);
     }
 
@@ -313,7 +315,7 @@ class Z80 {
             }
         }
         else if ((opCode1 === 0xfd) && ((opCode2 & 0xc7) === 0x46)) {
-            // LD r, (IX+d)
+            // LD r, (IY+d)
             const dest = xrctReg8(opCode2, 3);
             const arg1 = this.memory[PC+2];
             return {
@@ -360,34 +362,34 @@ class Z80 {
         }
         else if ((opCode1 & 0xf8) === 0x70) {
             // LD (HL), n
-            const arg1 = this.memory[PC+1];
+            const src = this.memory[PC+1];
             return {
                 inst: LD_HL_N,
-                src: arg1,
+                src,
                 nInst: 2,
                 cycles: 10
             }
         }
         else if ((opCode1 === 0xdd) && (opCode2 === 0x36)) {
             // LD (IX+d), n
-            const arg1 = this.memory[PC+2];
-            const arg2 = this.memory[PC+3];
+            const d = this.memory[PC+2];
+            const src = this.memory[PC+3];
             return {
                 inst: LD_IX_N,
-                d: arg1,
-                src: arg2,
+                d,
+                src,
                 nInst: 4,
                 cycles: 19
             }
         }
         else if ((opCode1 === 0xfd) && (opCode2 === 0x36)) {
             // LD (IY+d), n
-            const arg1 = this.memory[PC+2];
-            const arg2 = this.memory[PC+3];
+            const d = this.memory[PC+2];
+            const src = this.memory[PC+3];
             return {
                 inst: LD_IY_N,
-                d: arg1,
-                src: arg2,
+                d,
+                src,
                 nInst: 4,
                 cycles: 19
             }
@@ -1640,6 +1642,18 @@ class Z80 {
         return;
     }
 
+    getBC() {
+        return (this.reg8[B] << 8) | this.reg8[C];
+    }
+
+    getDE() {
+        return (this.reg8[D] << 8) | this.reg8[E];
+    }
+
+    getHL() {
+        return (this.reg8[H] << 8) | this.reg8[L];
+    }
+
     // 各命令の実行
     do_LD_R_R(inst) {
         const src = inst.src;
@@ -1651,6 +1665,90 @@ class Z80 {
         const src = inst.src;
         const dest = inst.dest;
         this.reg8[dest] = src;
+    }
+
+    do_LD_R_HL(inst) {
+        const dest = inst.dest;
+        const srcAddr = this.getHL();
+        this.reg8[dest] = this.memory[srcAddr];
+    }
+
+    do_LD_R_IX(inst) {
+        const dest = inst.dest;
+        const srcAddr = this.IX + inst.d;
+        this.reg8[dest] = this.memory[srcAddr];
+    }
+    
+    do_LD_R_IY(inst) {
+        const dest = inst.dest;
+        const srcAddr = this.IY + inst.d;
+        this.reg8[dest] = this.memory[srcAddr];        
+    }
+
+    do_LD_HL_R(inst) {
+        const src = inst.src;
+        const destAddr = this.getHL();
+        this.memory[destAddr] = src;
+    }
+
+    do_LD_IX_R(inst) {
+        const src = inst.src;
+        const destAddr = this.IX + inst.d;
+        this.memory[destAddr] = src;
+    }
+
+    do_LD_IY_R(inst) {
+        const src = inst.src;
+        const destAddr = this.IY + inst.d;
+        this.memory[destAddr] = src;
+    }
+
+    do_LD_HL_N(inst) {
+        const src = inst.src;
+        const destAddr = this.getHL();
+        this.memory[destAddr] = src;
+    }
+
+    do_LD_IX_N(inst) {
+        const src = inst.src;
+        const destAddr = this.IX + inst.d;
+        this.memory[destAddr] = src;
+    }
+
+    do_LD_IY_N(inst) {
+        const src = inst.src;
+        const destAddr = this.IY + inst.d;
+        this.memory[destAddr] = src;
+    }
+
+    do_LD_A_BC(inst) {
+        const srcAddr = this.getBC();
+        this.reg8[A] = this.memory[srcAddr];
+    }
+
+    do_LD_A_DE(inst) {
+        const srcAddr = this.getDE();
+        this.reg8[A] = this.memory[srcAddr];
+    }
+
+    do_LD_A_NN(inst) {
+        const srcAddr = inst.src;
+        this.reg8[A] = this.memory[srcAddr];
+    }
+
+    do_LD_BC_A(inst) {
+        const destAddr = this.getBC();
+        this.memory[srcAddr] = this.reg8[A];
+    }
+
+    do_LD_DE_A(inst) {
+        const destAddr = this.getDE();
+        this.memory[srcAddr] = this.reg8[A];
+    }
+
+    do_LD_NN_A(inst) {
+        const destAddr = inst.dest;
+        this.memory[srcAddr] = this.reg8[A];
     }
 
     do_JP(inst) {
