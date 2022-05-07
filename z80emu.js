@@ -1,4 +1,10 @@
-const {toHex2, toHex4, A, B, C, D, E, H, L, xrctReg8, xrctReg16, xrctCC, xrctRST, toRegName} = require('./Utils');
+const {
+    toHex2, 
+    toHex4, 
+    A, B, C, D, E, H, L, 
+    BC, DE, HL, SP, AF,
+    xrct3, xrct2, 
+    toRegName} = require('./Utils');
 
 // 8bitロードグループ
 const LD_R_R = 0x40;
@@ -270,8 +276,8 @@ class Z80 {
         // -----------------------------------
         else if ((opCode1 & 0xc0) === 0x40) {
             // LD r1, r2
-            const dest = xrctReg8(opCode1, 3);
-            const src = xrctReg8(opCode1, 0);
+            const dest = xrct3(opCode1, 3);
+            const src = xrct3(opCode1, 0);
             return {
                 inst: LD_R_R,
                 src,
@@ -282,7 +288,7 @@ class Z80 {
         }
         else if ((opCode1 & 0xc7) === 0x06) {
             // LD r, n
-            const dest = xrctReg8(opCode1, 3);
+            const dest = xrct3(opCode1, 3);
             const arg1 = this.memory[PC+1];
             return {
                 inst: LD_R_N,
@@ -294,7 +300,7 @@ class Z80 {
         }
         else if ((opCode1 & 0xc7) === 0x46) {
             // LD r, (HL)
-            const dest = xrctReg8(opCode1, 3);
+            const dest = xrct3(opCode1, 3);
             return {
                 inst: LD_R_HL,
                 dest,
@@ -304,7 +310,7 @@ class Z80 {
         }
         else if ((opCode1 === 0xdd) && ((opCode2 & 0xc7) === 0x46)) {
             // LD r, (IX+d)
-            const dest = xrctReg8(opCode2, 3);
+            const dest = xrct3(opCode2, 3);
             const arg1 = this.memory[PC+2];
             return {
                 inst: LD_R_IX,
@@ -316,7 +322,7 @@ class Z80 {
         }
         else if ((opCode1 === 0xfd) && ((opCode2 & 0xc7) === 0x46)) {
             // LD r, (IY+d)
-            const dest = xrctReg8(opCode2, 3);
+            const dest = xrct3(opCode2, 3);
             const arg1 = this.memory[PC+2];
             return {
                 inst: LD_R_IY,
@@ -328,7 +334,7 @@ class Z80 {
         }
         else if ((opCode1 & 0xf8) === 0x70) {
             // LD (HL), r
-            const src = xrctReg8(opCode1, 0);
+            const src = xrct3(opCode1, 0);
             return {
                 inst: LD_HL_R,
                 src,
@@ -338,7 +344,7 @@ class Z80 {
         }
         else if ((opCode1 === 0xdd) && ((opCode2 & 0xf8) === 0x70)) {
             // LD (IX+d), r
-            const src = xrctReg8(opCode2, 0);
+            const src = xrct3(opCode2, 0);
             const arg1 = this.memory[PC+2];
             return {
                 inst: LD_IX_R,
@@ -350,7 +356,7 @@ class Z80 {
         }
         else if ((opCode1 === 0xfd) && ((opCode2 & 0xf8) === 0x70)) {
             // LD (IY+d), r
-            const src = xrctReg8(opCode2, 0);
+            const src = xrct3(opCode2, 0);
             const arg1 = this.memory[PC+2];
             return {
                 inst: LD_IY_R,
@@ -455,13 +461,13 @@ class Z80 {
         // -----------------------------------
         else if ((opCode1 & 0xcf) === 0x01) {
             // LD dd, nn
-            const dest = xrctReg16(opCode1, 4);
-            const arg1 = this.memory[PC+1];
-            const arg2 = this.memory[PC+2];
-            const src = (arg2 << 8) | arg1;
+            const dest = xrct2(opCode1, 4);
+            const srcL = this.memory[PC+1];
+            const srcH = this.memory[PC+2];
             return {
                 inst: LD_dd_NN,
-                src,
+                srcL,
+                srcH,
                 dest,
                 nInst: 3,
                 cycles: 10
@@ -493,19 +499,19 @@ class Z80 {
         }
         else if (opCode1 === 0x2a) {
             // LD HL, (nn)
-            const arg1 = this.memory[PC+1];
-            const arg2 = this.memory[PC+2];
-            const src = (arg2 << 8) | arg1;
+            const srcL = this.memory[PC+1];
+            const srcH = this.memory[PC+2];
             return {
                 inst: LD_HL_ADDR,
-                src,
+                srcL,
+                srcH,
                 nInst: 3,
                 cycles: 16
             }
         }
         else if ((opCode1 === 0xed) && ((opCode2 & 0xcf) === 0x4b)) {
             // LD dd, (nn)
-            const dest = xrctReg16(opCode2, 4);
+            const dest = xrct2(opCode2, 4);
             const arg1 = this.memory[PC+2];
             const arg2 = this.memory[PC+3];
             const src = (arg2 << 8) | arg1;
@@ -555,7 +561,7 @@ class Z80 {
         }
         else if ((opCode1 === 0xed) && ((opCode2 & 0xcf) === 0x43)) {
             // LD (nn), dd
-            const src = xrctReg16(opCode2, 4);
+            const src = xrct2(opCode2, 4);
             const arg1 = this.memory[PC+2];
             const arg2 = this.memory[PC+3];
             const dest = (arg2 << 8) | arg1;
@@ -617,7 +623,7 @@ class Z80 {
         }
         else if ((opCode1 & 0xcf) === 0xc5) {
             // PUSH qq
-            const src = xrctReg16(opCode1, 4);
+            const src = xrct2(opCode1, 4);
             return {
                 inst: PUSH_qq,
                 src,
@@ -643,7 +649,7 @@ class Z80 {
         }
         else if ((opCode1 & 0xcf) === 0xc1) {
             // POP qq
-            const dest = xrctReg16(opCode1, 4);
+            const dest = xrct2(opCode1, 4);
             return {
                 inst: POP_qq,
                 dest,
@@ -787,7 +793,7 @@ class Z80 {
         // -----------------------------------
         else if ((opCode1 & 0xf8) === 0x80) {
             // ADD A, r
-            const src = xrctReg8(opCode1, 0);
+            const src = xrct3(opCode1, 0);
             return {
                 inst: ADD_A_R,
                 src,
@@ -835,7 +841,7 @@ class Z80 {
         }
         else if ((opCode1 & 0xf8) === 0x88) {
             // ADC A, r
-            const src = xrctReg8(opCode1, 0);
+            const src = xrct3(opCode1, 0);
             return {
                 inst: ADC_A_R,
                 src,
@@ -883,7 +889,7 @@ class Z80 {
         }
         else if ((opCode1 & 0xf8) === 0x90) {
             // SUB A, r
-            const src = xrctReg8(opCode1, 0);
+            const src = xrct3(opCode1, 0);
             return {
                 inst: SUB_A_R,
                 src,
@@ -931,7 +937,7 @@ class Z80 {
         }
         else if ((opCode1 & 0xf8) === 0x98) {
             // SBC A, r
-            const src = xrctReg8(opCode1, 0);
+            const src = xrct3(opCode1, 0);
             return {
                 inst: SBC_A_R,
                 src,
@@ -979,7 +985,7 @@ class Z80 {
         }
         else if ((opCode1 & 0xf8) === 0xa0) {
             // AND A, r
-            const src = xrctReg8(opCode1, 0);
+            const src = xrct3(opCode1, 0);
             return {
                 inst: AND_A_R,
                 src,
@@ -1027,7 +1033,7 @@ class Z80 {
         }
         else if ((opCode1 & 0xf8) === 0xb0) {
             // OR A, r
-            const src = xrctReg8(opCode1, 0);
+            const src = xrct3(opCode1, 0);
             return {
                 inst: OR_A_R,
                 src,
@@ -1075,7 +1081,7 @@ class Z80 {
         }
         else if ((opCode1 & 0xf8) === 0xa8) {
             // XOR A, r
-            const src = xrctReg8(opCode1, 0);
+            const src = xrct3(opCode1, 0);
             return {
                 inst: XOR_A_R,
                 src,
@@ -1123,7 +1129,7 @@ class Z80 {
         }
         else if ((opCode1 & 0xf8) === 0xb8) {
             // CP A, r
-            const src = xrctReg8(opCode1, 0);
+            const src = xrct3(opCode1, 0);
             return {
                 inst: CP_A_R,
                 src,
@@ -1171,7 +1177,7 @@ class Z80 {
         }
         else if ((opCode1 & 0xc7) === 0x04) {
             // INC A, r
-            const src = xrctReg8(opCode1, 3);
+            const src = xrct3(opCode1, 3);
             return {
                 inst: INC_A_R,
                 src,
@@ -1209,7 +1215,7 @@ class Z80 {
         }
         else if ((opCode1 & 0xc7) === 0x05) {
             // DEC A, r
-            const src = xrctReg8(opCode1, 3);
+            const src = xrct3(opCode1, 3);
             return {
                 inst: DEC_A_R,
                 src,
@@ -1329,7 +1335,7 @@ class Z80 {
         // 16bit算術演算グループ
         // -----------------------------------
         else if ((opCode1 & 0xcf) === 0x09) {
-            const src = xrctReg16(opCode1, 4);
+            const src = xrct2(opCode1, 4);
             return {
                 inst: ADD_HL_ss,
                 src,
@@ -1338,7 +1344,7 @@ class Z80 {
             }
         }
         else if ((opCode1 === 0xed) && ((opCode2 & 0xcf) === 0x4a)) {
-            const ss = xrctReg16(opCode2, 4);
+            const ss = xrct2(opCode2, 4);
             return {
                 inst: ADC_HL_ss,
                 ss,
@@ -1347,7 +1353,7 @@ class Z80 {
             }
         }
         else if ((opCode1 === 0xed) && ((opCode2 & 0xcf) === 0x42)) {
-            const ss = xrctReg16(opCode2, 4);
+            const ss = xrct2(opCode2, 4);
             return {
                 inst: SBC_HL_ss,
                 ss,
@@ -1356,7 +1362,7 @@ class Z80 {
             }
         }
         else if ((opCode1 === 0xdd) && ((opCode2 & 0xcf) === 0x09)) {
-            const pp = xrctReg16(opCode2, 4);
+            const pp = xrct2(opCode2, 4);
             return {
                 inst: ADD_IX_pp,
                 pp,
@@ -1365,7 +1371,7 @@ class Z80 {
             }
         }
         else if ((opCode1 === 0xfd) && ((opCode2 & 0xcf) === 0x09)) {
-            const rr = xrctReg16(opCode2, 4);
+            const rr = xrct2(opCode2, 4);
             return {
                 inst: ADD_IY_rr,
                 rr,
@@ -1374,7 +1380,7 @@ class Z80 {
             }
         }
         else if ((opCode1 & 0xcf) === 0x03) {
-            const ss = xrctReg16(opCode1, 4);
+            const ss = xrct2(opCode1, 4);
             return {
                 inst: INC_ss,
                 ss,
@@ -1397,7 +1403,7 @@ class Z80 {
             }
         }
         else if ((opCode1 & 0xcf) === 0x0b) {
-            const ss = xrctReg16(opCode1, 4);
+            const ss = xrct2(opCode1, 4);
             return {
                 inst: DEC_ss,
                 ss,
@@ -1436,7 +1442,7 @@ class Z80 {
         }
         else if ((opCode1 & 0xc7) === 0xc2) {
             // JP cc, nn
-            const cc = xrctCC(opCode1, 3);
+            const cc = xrct3(opCode1, 3);
             const arg1 = this.memory[PC+1];
             const arg2 = this.memory[PC+2];
             const nn = (arg2 << 8) | arg1;
@@ -1549,7 +1555,7 @@ class Z80 {
         }
         else if ((opCode1 & 0xc7) === 0xc4) {
             // CALL cc, nn
-            const cc = xrctCC(opCode1, 3);
+            const cc = xrct3(opCode1, 3);
             const arg1 = this.memory[PC+1];
             const arg2 = this.memory[PC+2];
             const nn = (arg2 << 8) | arg1;
@@ -1571,7 +1577,7 @@ class Z80 {
         }
         else if ((opCode1 & 0xc7) === 0xc0) {
             // RET cc
-            const cc = xrctCC(opCode1, 3);
+            const cc = xrct3(opCode1, 3);
             return {
                 inst: RET_cc,
                 cc,
@@ -1597,7 +1603,7 @@ class Z80 {
         }
         else if ((opCode1 & 0xc7) === 0xc7) {
             // RST p
-            const p = xrctRST(opCode1, 3);
+            const p = xrct3(opCode1, 3);
             return {
                 inst: RST,
                 p,
@@ -1642,6 +1648,9 @@ class Z80 {
         return;
     }
 
+    // -------------------------------
+    //  Helper Methods
+    // -------------------------------
     getBC() {
         return (this.reg8[B] << 8) | this.reg8[C];
     }
@@ -1654,7 +1663,73 @@ class Z80 {
         return (this.reg8[H] << 8) | this.reg8[L];
     }
 
+    // 16bitレジスタへ値をセット
+    //
+    // @param dest .. 代入先のレジスタを表すビットパターン
+    // 00 = BC
+    // 01 = DE
+    // 10 = HL
+    // 11 = SP
+    // @param srcH .. 上位バイト
+    // @param srcH .. 下位バイト
+    loadToReg16_1(dest, srcH, srcL) {
+        switch (dest) {
+            case 0: {   // BC
+                this.reg[B] = srcH;
+                this.reg[C] = srcL;
+            }
+            case 1: {   // DE
+                this.reg[D] = srcH;
+                this.reg[E] = srcL;
+            }
+            case 2: {   // HL
+                this.reg[H] = srcH;
+                this.reg[L] = srcL;
+            }
+            case 3: {   // SP
+                this.SP = (srcH << 8) | srcL;
+            }
+        }    
+    }
+
+    // 16bitレジスタからメモリへ値をセット
+    //
+    // @param src .. 代入元のレジスタを表すビットパターン
+    // 00 = BC
+    // 01 = DE
+    // 10 = HL
+    // 11 = SP
+    // @param dest .. ストア先のメモリのアドレス
+    saveFromReg16_1(src, dest) {
+        let valueL = 0;
+        let valueH = 0;
+        switch (src) {
+            case 0: {   // BC
+                valueH = this.reg[B];
+                valueL = this.reg[C];
+            }
+            case 1: {   // DE
+                valueH = this.reg[D];
+                valueL = this.reg[E];
+            }
+            case 2: {   // HL
+                valueH = this.reg[H];
+                valueL = this.reg[L];
+            }
+            case 3: {   // SP
+                valueH = ((this.SP & 0xff00) >> 8);
+                valueL = (this.SP & 0xff);
+            }
+            default:
+                return;
+        }
+        this.memory[dest] = valueL;
+        this.memory[dest+1] = valueH;
+    }
+
+    // -------------------------------
     // 各命令の実行
+    // -------------------------------
     do_LD_R_R(inst) {
         const src = inst.src;
         const dest = inst.dest;
@@ -1751,8 +1826,74 @@ class Z80 {
         this.memory[srcAddr] = this.reg8[A];
     }
 
-    do_JP(inst) {
+    do_LD_dd_NN(inst) {
+        this.loadToReg16_1(inst.dest, inst.srcH, inst.srcL);
+    }
 
+    do_LD_IX_NN(inst) {
+        this.IX = inst.src;
+    }
+
+    do_LD_IY_NN(inst) {
+        this.IY = inst.src;
+    }
+
+    do_LD_HL_ADDR(inst) {
+        this.loadToReg16_1(HL, inst.srcH, inst.srcL);
+    }
+
+    do_LD_dd_ADDR(inst) {
+        const addr = inst.src;
+        const srcL = this.memory[addr];
+        const srcH = this.memory[addr+1];
+        this.loadToReg16_1(inst.dest, srcH, srcL);
+    }
+
+    do_LD_IX_ADDR(inst) {
+        const addr = inst.src;
+        const srcL = this.memory[addr];
+        const srcH = this.memory[addr+1];
+        this.IX = (srcH << 8) | srcL;
+    }
+
+    do_LD_IY_ADDR(inst) {
+        const addr = inst.src;
+        const srcL = this.memory[addr];
+        const srcH = this.memory[addr+1];
+        this.IY = (srcH << 8) | srcL;
+    }
+
+    do_LD_ADDR_HL(inst) {
+        this.saveFromReg16_1(HL, inst.dest);
+    }
+
+    do_LD_ADDR_dd(inst) {
+        this.saveFromReg16_1(inst.src, inst.dest);
+    }
+
+    do_LD_ADDR_IX(inst) {
+        this.memory[inst.dest] = (this.IX & 0xff);
+        this.memory[inst.dest+1] = ((this.IX & 0xff00) >> 8);
+    }
+
+    do_LD_ADDR_IY(inst) {
+        this.memory[inst.dest] = (this.IY & 0xff);
+        this.memory[inst.dest+1] = ((this.IY & 0xff00) >> 8);
+    }
+
+    do_LD_SP_HL(inst) {
+        this.SP = (this.reg8[H] << 8) | this.reg[L];
+    }
+
+    do_LD_SP_IX(inst) {
+        this.SP = this.IX;
+    }
+
+    do_LD_SP_IY(inst) {
+        this.SP = this.IY;
+    }
+
+    do_JP(inst) {
     }
 
     test1() {
