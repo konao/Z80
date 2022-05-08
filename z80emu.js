@@ -1669,10 +1669,14 @@ class Z80 {
     // 00 = BC
     // 01 = DE
     // 10 = HL
-    // 11 = SP
+    // 11 = SP (regType === 0のとき)
+    // 11 = AF (regType !== 0のとき)
     // @param srcH .. 上位バイト
     // @param srcH .. 下位バイト
-    loadToReg16_1(dest, srcH, srcL) {
+    // @param regType .. destの表すレジスタのタイプ
+    // regType === 0 ---> dest=11をSPとみなす
+    // regType !== 0 ---> dest=11をAFとみなす
+    loadToReg16(dest, srcH, srcL, regType) {
         switch (dest) {
             case 0: {   // BC
                 this.reg[B] = srcH;
@@ -1686,8 +1690,15 @@ class Z80 {
                 this.reg[H] = srcH;
                 this.reg[L] = srcL;
             }
-            case 3: {   // SP
-                this.SP = (srcH << 8) | srcL;
+            case 3: { 
+                if (regType === 0) {
+                    // SP
+                    this.SP = (srcH << 8) | srcL;
+                } else {
+                    // AF
+                    this.reg[A] = srcH;
+                    this.FLG = srcL;
+                }
             }
         }    
     }
@@ -1698,9 +1709,13 @@ class Z80 {
     // 00 = BC
     // 01 = DE
     // 10 = HL
-    // 11 = SP
+    // 11 = SP (regType === 0のとき)
+    // 11 = AF (regType !== 0のとき)
     // @param dest .. ストア先のメモリのアドレス
-    saveFromReg16_1(src, dest) {
+    // @param regType .. srcの表すレジスタのタイプ
+    // regType === 0 ---> src=11をSPとみなす
+    // regType !== 0 ---> src=11をAFとみなす
+    saveFromReg16(src, dest, regType) {
         let valueL = 0;
         let valueH = 0;
         switch (src) {
@@ -1716,9 +1731,16 @@ class Z80 {
                 valueH = this.reg[H];
                 valueL = this.reg[L];
             }
-            case 3: {   // SP
-                valueH = ((this.SP & 0xff00) >> 8);
-                valueL = (this.SP & 0xff);
+            case 3: {
+                if (regType === 0) {
+                    // SP
+                    valueH = ((this.SP & 0xff00) >> 8);
+                    valueL = (this.SP & 0xff);
+                } else {
+                    // AF
+                    valueH = this.reg[A];
+                    valueL = this.FLG;
+                }
             }
             default:
                 return;
@@ -1827,7 +1849,7 @@ class Z80 {
     }
 
     do_LD_dd_NN(inst) {
-        this.loadToReg16_1(inst.dest, inst.srcH, inst.srcL);
+        this.loadToReg16(inst.dest, inst.srcH, inst.srcL, 0);
     }
 
     do_LD_IX_NN(inst) {
@@ -1839,14 +1861,14 @@ class Z80 {
     }
 
     do_LD_HL_ADDR(inst) {
-        this.loadToReg16_1(HL, inst.srcH, inst.srcL);
+        this.loadToReg16(HL, inst.srcH, inst.srcL, 0);
     }
 
     do_LD_dd_ADDR(inst) {
         const addr = inst.src;
         const srcL = this.memory[addr];
         const srcH = this.memory[addr+1];
-        this.loadToReg16_1(inst.dest, srcH, srcL);
+        this.loadToReg16(inst.dest, srcH, srcL, 0);
     }
 
     do_LD_IX_ADDR(inst) {
@@ -1864,11 +1886,11 @@ class Z80 {
     }
 
     do_LD_ADDR_HL(inst) {
-        this.saveFromReg16_1(HL, inst.dest);
+        this.saveFromReg16(HL, inst.dest, 0);
     }
 
     do_LD_ADDR_dd(inst) {
-        this.saveFromReg16_1(inst.src, inst.dest);
+        this.saveFromReg16(inst.src, inst.dest, 0);
     }
 
     do_LD_ADDR_IX(inst) {
@@ -1891,6 +1913,38 @@ class Z80 {
 
     do_LD_SP_IY(inst) {
         this.SP = this.IY;
+    }
+
+    do_PUSH_qq(inst) {
+        if (this.SP >= 2) {
+            this.SP = this.SP - 2;
+            this.saveFromReg16(inst.src, this.SP, 1);
+        } else {
+            // error
+            throw "stack underflow";
+        }
+    }
+
+    do_PUSH_IX(inst) {
+        if (this.SP >= 2) {
+            this.SP = this.SP - 2;
+            this.memory[this.SP] = (this.IX & 0xff);
+            this.memory[this.SP+1] = ((this.IX & 0xff00) >> 8);
+        } else {
+            // error
+            throw "stack underflow";
+        }
+    }
+
+    do_PUSH_IY(inst) {
+        if (this.SP >= 2) {
+            this.SP = this.SP - 2;
+            this.memory[this.SP] = (this.IY & 0xff);
+            this.memory[this.SP+1] = ((this.IY & 0xff00) >> 8);
+        } else {
+            // error
+            throw "stack underflow";
+        }
     }
 
     do_JP(inst) {
