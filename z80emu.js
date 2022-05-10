@@ -1749,9 +1749,125 @@ class Z80 {
         this.memory[dest+1] = valueH;
     }
 
-    // -------------------------------
+    // ------------------------------------
+    //  フラグ操作
+    // ------------------------------------
+
+    // --------------------------------
+    // C: キャリーフラグ
+    // @param bEnable : trueでフラグセット, falseでフラグクリア
+    setCF(bEnable) {
+        // CF(キャリーフラグ)は0bit目
+        if (bEnable) {
+            this.FLG = this.FLG | 0x01;
+        } else {
+            this.FLG = this.FLG & 0xfe;
+        }
+    }
+
+    // Cフラグの状態を調べる
+    // setされていればtrue, そうでなければfalseを返す
+    testCF(bEnable) {
+        return (this.FLG & 0x01) === 0 ? false : true;
+    }
+
+    // --------------------------------
+    // N: 加・減算フラグ
+    // @param bEnable : trueでフラグセット, falseでフラグクリア
+    setNF(bEnable) {
+        // NFは1bit目
+        if (bEnable) {
+            this.FLG = this.FLG | 0x02;
+        } else {
+            this.FLG = this.FLG & 0xfd;
+        }
+    }
+
+    // Nフラグの状態を調べる
+    // setされていればtrue, そうでなければfalseを返す
+    testNF(bEnable) {
+        return (this.FLG & 0x02) === 0 ? false : true;
+    }
+
+    // --------------------------------
+    // P/V: パリティ/オーバーフローフラグ
+    // @param bEnable : trueでフラグセット, falseでフラグクリア
+    setNF(bEnable) {
+        // PFは2bit目
+        if (bEnable) {
+            this.FLG = this.FLG | 0x04;
+        } else {
+            this.FLG = this.FLG & 0xfb;
+        }
+    }
+
+    // P/Vフラグの状態を調べる
+    // setされていればtrue, そうでなければfalseを返す
+    testNF(bEnable) {
+        return (this.FLG & 0x04) === 0 ? false : true;
+    }
+
+    // --------------------------------
+    // H: ハーフキャリーフラグ
+    // @param bEnable : trueでフラグセット, falseでフラグクリア
+    setNF(bEnable) {
+        // HFは4bit目
+        if (bEnable) {
+            this.FLG = this.FLG | 0x10;
+        } else {
+            this.FLG = this.FLG & 0xef;
+        }
+    }
+
+    // Hフラグの状態を調べる
+    // setされていればtrue, そうでなければfalseを返す
+    testNF(bEnable) {
+        return (this.FLG & 0x10) === 0 ? false : true;
+    }
+
+    // --------------------------------
+    // Z: ゼロフラグ
+    // @param bEnable : trueでフラグセット, falseでフラグクリア
+    setZF(bEnable) {
+        // ZFは6bit目
+        if (bEnable) {
+            this.FLG = this.FLG | 0x40;
+        } else {
+            this.FLG = this.FLG & 0xbf;
+        }
+    }
+
+    // Zフラグの状態を調べる
+    // setされていればtrue, そうでなければfalseを返す
+    testZF(bEnable) {
+        return (this.FLG & 0x40) === 0 ? false : true;
+    }
+
+    // --------------------------------
+    // S: サインフラグ
+    // @param bEnable : trueでフラグセット, falseでフラグクリア
+    setNF(bEnable) {
+        // SFは7bit目
+        if (bEnable) {
+            this.FLG = this.FLG | 0x80;
+        } else {
+            this.FLG = this.FLG & 0x7f;
+        }
+    }
+
+    // Sフラグの状態を調べる
+    // setされていればtrue, そうでなければfalseを返す
+    testNF(bEnable) {
+        return (this.FLG & 0x80) === 0 ? false : true;
+    }
+
+    // ============================================
     // 各命令の実行
-    // -------------------------------
+    // ============================================
+
+    // -----------------------------------
+    // 8bitロードグループ
+    // -----------------------------------
     do_LD_R_R(inst) {
         const src = inst.src;
         const dest = inst.dest;
@@ -1848,6 +1964,9 @@ class Z80 {
         this.memory[srcAddr] = this.reg8[A];
     }
 
+    // -----------------------------------
+    // 16bitロードグループ
+    // -----------------------------------
     do_LD_dd_NN(inst) {
         this.loadToReg16(inst.dest, inst.srcH, inst.srcL, 0);
     }
@@ -1945,6 +2064,117 @@ class Z80 {
             // error
             throw "stack underflow";
         }
+    }
+
+    do_POP_qq(inst) {
+        if (this.SP <= 0xfffe) {
+            const srcL = this.memory[this.SP];
+            const srcH = this.memory[this.SP+1];
+            this.loadToReg16(inst.dest, srcH, srcL, 1);
+            this.SP = this.SP + 2;
+        } else {
+            // error
+            throw "stack overflow";
+        }
+    }
+
+    do_POP_IX(inst) {
+        if (this.SP <= 0xfffe) {
+            const srcL = this.memory[this.SP];
+            const srcH = this.memory[this.SP+1];
+            this.IX = (srcH << 8) | srcL;
+            this.SP = this.SP + 2;
+        } else {
+            // error
+            throw "stack overflow";
+        }
+    }
+
+    do_POP_IY(inst) {
+        if (this.SP <= 0xfffe) {
+            const srcL = this.memory[this.SP];
+            const srcH = this.memory[this.SP+1];
+            this.IY = (srcH << 8) | srcL;
+            this.SP = this.SP + 2;
+        } else {
+            // error
+            throw "stack overflow";
+        }
+    }
+
+    // -----------------------------------
+    // 8bit算術、論理演算グループ
+    // -----------------------------------
+
+    // 算術演算の結果をフラグに反映
+    updateFLG(result) {
+        this.setCF(result >= 0x100);
+        this.setZF(result === 0);
+
+        // TODO
+        // まだフラグの反映コードは不十分
+    }
+
+    do_ADD_A_R(inst) {
+        const result = (this.reg[A] + this.reg[inst.src]) & 0xff;
+        this.reg[A] = result;
+        this.updateFLG(result);
+    }
+
+    do_ADD_A_N(inst) {
+        this.do_ADD_A_R(inst);
+    }
+
+    do_ADD_A_HL(inst) {
+        const addr = this.getHL();
+        const result = (this.reg[A] + this.memory[addr]) & 0xff;
+        this.reg[A] = result;
+        this.updateFLG(result);
+    }
+
+    do_ADD_A_IX(inst) {
+        const addr = this.IX + inst.d;  // TODO (overflowチェック)
+        const result = (this.reg[A] + this.memory[addr]) & 0xff;
+        this.reg[A] = result;
+        this.updateFLG(result);
+    }
+
+    do_ADD_A_IY(inst) {
+        const addr = this.IY + inst.d;  // TODO (overflowチェック)
+        const result = (this.reg[A] + this.memory[addr]) & 0xff;
+        this.reg[A] = result;
+        this.updateFLG(result);
+    }
+
+    do_ADC_A_R(inst) {
+        const result = (this.reg[A] + this.reg[inst.src]);
+        this.reg[A] = result & 0xff;
+        this.updateFLG(result);
+    }
+
+    do_ADC_A_NN(inst) {
+        this.do_ADC_R(inst);
+    }
+
+    do_ADC_A_HL(inst) {
+        const addr = this.getHL();
+        const result = (this.reg[A] + this.memory[addr]);
+        this.reg[A] = result & 0xff;
+        this.updateFLG(result);
+    }
+
+    do_ADC_A_IX(inst) {
+        const addr = this.IX + inst.d;  // TODO (overflowチェック)
+        const result = (this.reg[A] + this.memory[addr]);
+        this.reg[A] = result & 0xff;
+        this.updateFLG(result);
+    }
+
+    do_ADC_A_IY(inst) {
+        const addr = this.IY + inst.d;  // TODO (overflowチェック)
+        const result = (this.reg[A] + this.memory[addr]);
+        this.reg[A] = result & 0xff;
+        this.updateFLG(result);
     }
 
     do_JP(inst) {
