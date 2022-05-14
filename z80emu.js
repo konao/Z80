@@ -108,14 +108,14 @@ const CP_A_N = 0xfe;
 const CP_A_HL = 0xbe;
 const CP_A_IX = 0xddbe;
 const CP_A_IY = 0xfdbe;
-const INC_A_R = 0x04;
-const INC_A_HL = 0x34;
-const INC_A_IX = 0xdd34;
-const INC_A_IY = 0xfd34;
-const DEC_A_R = 0x05;
-const DEC_A_HL = 0x35;
-const DEC_A_IX = 0xdd35;
-const DEC_A_IY = 0xfd35;
+const INC_R = 0x04;
+const INC_REF_HL = 0x34;
+const INC_REF_IX = 0xdd34;
+const INC_REF_IY = 0xfd34;
+const DEC_R = 0x05;
+const DEC_REF_HL = 0x35;
+const DEC_REF_IX = 0xdd35;
+const DEC_REF_IY = 0xfd35;
 
 // 汎用算術演算、CPU制御グループ
 const DAA = 0x27;
@@ -1176,76 +1176,76 @@ class Z80 {
             }
         }
         else if ((opCode1 & 0xc7) === 0x04) {
-            // INC A, r
-            const src = xrct3(opCode1, 3);
+            // INC r
+            const dest = xrct3(opCode1, 3);
             return {
-                inst: INC_A_R,
-                src,
+                inst: INC_R,
+                dest,
                 nInst: 1,
                 cycles: 4
             }
         }
         else if (opCode1 === 0x34) {
-            // INC A, (HL)
+            // INC (HL)
             return {
-                inst: INC_A_HL,
+                inst: INC_REF_HL,
                 nInst: 2,
                 cycles: 7
             }
         }
         else if ((opCode1 === 0xdd) && (opCode2 === 0x34)) {
-            // INC A, (IX+d)
+            // INC (IX+d)
             const arg1 = this.memory[PC+2];
             return {
-                inst: INC_A_IX,
+                inst: INC_REF_IX,
                 d: arg1,
                 nInst: 3,
                 cycles: 19
             }
         }
         else if ((opCode1 === 0xfd) && (opCode2 === 0x34)) {
-            // INC A, (IY+d)
+            // INC (IY+d)
             const arg1 = this.memory[PC+2];
             return {
-                inst: INC_A_IY,
+                inst: INC_REF_IY,
                 d: arg1,
                 nInst: 3,
                 cycles: 19
             }
         }
         else if ((opCode1 & 0xc7) === 0x05) {
-            // DEC A, r
-            const src = xrct3(opCode1, 3);
+            // DEC r
+            const dest = xrct3(opCode1, 3);
             return {
-                inst: DEC_A_R,
-                src,
+                inst: DEC_R,
+                dest,
                 nInst: 1,
                 cycles: 4
             }
         }
         else if (opCode1 === 0x35) {
-            // DEC A, (HL)
+            // DEC (HL)
             return {
-                inst: DEC_A_HL,
+                inst: DEC_REF_HL,
                 nInst: 2,
                 cycles: 7
             }
         }
         else if ((opCode1 === 0xdd) && (opCode2 === 0x35)) {
-            // DEC A, (IX+d)
+            // DEC (IX+d)
             const arg1 = this.memory[PC+2];
             return {
-                inst: DEC_A_IX,
+                inst: DEC_REF_IX,
                 d: arg1,
                 nInst: 3,
                 cycles: 19
             }
         }
         else if ((opCode1 === 0xfd) && (opCode2 === 0x35)) {
-            // DEC A, (IY+d)
+            // DEC (IY+d)
             const arg1 = this.memory[PC+2];
             return {
-                inst: DEC_A_IY,
+                inst: DEC_REF_IY,
                 d: arg1,
                 nInst: 3,
                 cycles: 19
@@ -1767,8 +1767,13 @@ class Z80 {
 
     // Cフラグの状態を調べる
     // setされていればtrue, そうでなければfalseを返す
-    testCF(bEnable) {
+    testCF() {
         return (this.FLG & 0x01) === 0 ? false : true;
+    }
+
+    // キャリーフラグがsetされていれば1, そうでなければ0を返す
+    getCF() {
+        return (this.testCF()) ? 1 : 0;
     }
 
     // --------------------------------
@@ -1785,14 +1790,14 @@ class Z80 {
 
     // Nフラグの状態を調べる
     // setされていればtrue, そうでなければfalseを返す
-    testNF(bEnable) {
+    testNF() {
         return (this.FLG & 0x02) === 0 ? false : true;
     }
 
     // --------------------------------
     // P/V: パリティ/オーバーフローフラグ
     // @param bEnable : trueでフラグセット, falseでフラグクリア
-    setNF(bEnable) {
+    setPVF(bEnable) {
         // PFは2bit目
         if (bEnable) {
             this.FLG = this.FLG | 0x04;
@@ -1803,14 +1808,14 @@ class Z80 {
 
     // P/Vフラグの状態を調べる
     // setされていればtrue, そうでなければfalseを返す
-    testNF(bEnable) {
+    testPVF() {
         return (this.FLG & 0x04) === 0 ? false : true;
     }
 
     // --------------------------------
     // H: ハーフキャリーフラグ
     // @param bEnable : trueでフラグセット, falseでフラグクリア
-    setNF(bEnable) {
+    setHF(bEnable) {
         // HFは4bit目
         if (bEnable) {
             this.FLG = this.FLG | 0x10;
@@ -1821,7 +1826,7 @@ class Z80 {
 
     // Hフラグの状態を調べる
     // setされていればtrue, そうでなければfalseを返す
-    testNF(bEnable) {
+    testHF() {
         return (this.FLG & 0x10) === 0 ? false : true;
     }
 
@@ -1839,14 +1844,14 @@ class Z80 {
 
     // Zフラグの状態を調べる
     // setされていればtrue, そうでなければfalseを返す
-    testZF(bEnable) {
+    testZF() {
         return (this.FLG & 0x40) === 0 ? false : true;
     }
 
     // --------------------------------
     // S: サインフラグ
     // @param bEnable : trueでフラグセット, falseでフラグクリア
-    setNF(bEnable) {
+    setSF(bEnable) {
         // SFは7bit目
         if (bEnable) {
             this.FLG = this.FLG | 0x80;
@@ -1857,7 +1862,7 @@ class Z80 {
 
     // Sフラグの状態を調べる
     // setされていればtrue, そうでなければfalseを返す
-    testNF(bEnable) {
+    testSF() {
         return (this.FLG & 0x80) === 0 ? false : true;
     }
 
@@ -2129,65 +2134,273 @@ class Z80 {
     }
 
     do_ADD_A_R(inst) {
-        const result = (this.reg[A] + this.reg[inst.src]) & 0xff;
-        this.reg[A] = result;
-        this.updateFLG(result);
+        const restmp = this.reg[A] + this.reg[inst.src];
+        this.updateFLG(restmp);
+        this.reg[A] = restmp & 0xff;
     }
 
     do_ADD_A_N(inst) {
         this.do_ADD_A_R(inst);
     }
 
+    do_ADD_A_REF(addr) {
+        const restmp = (this.reg[A] + this.memory[addr]);
+        this.updateFLG(restmp);
+        this.reg[A] = restmp & 0xff;
+    }
+
     do_ADD_A_HL(inst) {
-        const addr = this.getHL();
-        const result = (this.reg[A] + this.memory[addr]) & 0xff;
-        this.reg[A] = result;
-        this.updateFLG(result);
+        this.do_ADD_A_REF(this.getHL());
     }
 
     do_ADD_A_IX(inst) {
-        const addr = this.IX + inst.d;  // TODO (overflowチェック)
-        const result = (this.reg[A] + this.memory[addr]) & 0xff;
-        this.reg[A] = result;
-        this.updateFLG(result);
+        this.do_ADD_A_REF(this.IX + inst.d);  // TODO (overflowチェック)
     }
 
     do_ADD_A_IY(inst) {
-        const addr = this.IY + inst.d;  // TODO (overflowチェック)
-        const result = (this.reg[A] + this.memory[addr]) & 0xff;
-        this.reg[A] = result;
-        this.updateFLG(result);
+        this.do_ADD_A_REF(this.IY + inst.d);  // TODO (overflowチェック)
     }
 
     do_ADC_A_R(inst) {
-        const result = (this.reg[A] + this.reg[inst.src]);
-        this.reg[A] = result & 0xff;
-        this.updateFLG(result);
+        const restmp = (this.reg[A] + this.reg[inst.src]) + this.getCF();
+        this.updateFLG(restmp);
+        this.reg[A] = restmp & 0xff;
     }
 
     do_ADC_A_NN(inst) {
         this.do_ADC_R(inst);
     }
 
+    do_ADC_A_REF(addr) {
+        const restmp = (this.reg[A] + this.memory[addr]) + this.getCF();
+        this.updateFLG(restmp);
+        this.reg[A] = restmp & 0xff;
+    }
+
     do_ADC_A_HL(inst) {
-        const addr = this.getHL();
-        const result = (this.reg[A] + this.memory[addr]);
-        this.reg[A] = result & 0xff;
-        this.updateFLG(result);
+        this.do_ADC_A_REF(this.getHL());
     }
 
     do_ADC_A_IX(inst) {
-        const addr = this.IX + inst.d;  // TODO (overflowチェック)
-        const result = (this.reg[A] + this.memory[addr]);
-        this.reg[A] = result & 0xff;
-        this.updateFLG(result);
+        this.do_ADC_A_REF(this.IX + inst.d);  // TODO (overflowチェック)
     }
 
     do_ADC_A_IY(inst) {
-        const addr = this.IY + inst.d;  // TODO (overflowチェック)
-        const result = (this.reg[A] + this.memory[addr]);
-        this.reg[A] = result & 0xff;
-        this.updateFLG(result);
+        this.do_ADC_A_REF(this.IY + inst.d);  // TODO (overflowチェック)
+    }
+
+    do_SUB_A_R(inst) {
+        const restmp = this.reg[A] - this.reg[inst.src];
+        this.updateFLG(restmp);
+        this.reg[A] = restmp & 0xff;
+    }
+
+    do_SUB_A_N(inst) {
+        this.do_SUB_A_R(inst);
+    }
+
+    do_SUB_A_REF(addr) {
+        const restmp = (this.reg[A] - this.memory[addr]);
+        this.updateFLG(restmp);
+        this.reg[A] = restmp & 0xff;
+    }
+
+    do_SUB_A_HL(inst) {
+        this.do_SUB_A_REF(this.getHL());
+    }
+
+    do_SUB_A_IX(inst) {
+        this.do_SUB_A_REF(this.IX + inst.d);  // TODO (overflowチェック)
+    }
+
+    do_SUB_A_IY(inst) {
+        this.do_SUB_A_REF(this.IY + inst.d);  // TODO (overflowチェック)
+    }
+
+    do_SBC_A_R(inst) {
+        const restmp = this.reg[A] - this.reg[inst.src] - this.getCF();
+        this.updateFLG(restmp);
+        this.reg[A] = restmp & 0xff;
+    }
+
+    do_SBC_A_N(inst) {
+        this.do_SBC_A_R(inst);
+    }
+
+    do_SBC_A_REF(addr) {
+        const restmp = (this.reg[A] - this.memory[addr]) - this.getCF();
+        this.updateFLG(restmp);
+        this.reg[A] = restmp & 0xff;
+    }
+
+    do_SBC_A_HL(inst) {
+        this.do_SBC_A_REF(this.getHL());
+    }
+
+    do_SBC_A_IX(inst) {
+        this.do_SBC_A_REF(this.IX + inst.d);  // TODO (overflowチェック)
+    }
+
+    do_SBC_A_IY(inst) {
+        this.do_SBC_A_REF(this.IY + inst.d);  // TODO (overflowチェック)
+    }
+
+    do_AND_A_R(inst) {
+        const restmp = this.reg[A] & this.reg[inst.src];
+        this.updateFLG(restmp);
+        this.reg[A] = restmp & 0xff;
+    }
+
+    do_AND_A_N(inst) {
+        this.do_AND_A_R(inst);
+    }
+
+    do_AND_A_REF(addr) {
+        const restmp = (this.reg[A] & this.memory[addr]);
+        this.updateFLG(restmp);
+        this.reg[A] = restmp & 0xff;
+    }
+
+    do_AND_A_HL(inst) {
+        this.do_AND_A_REF(this.getHL());
+    }
+
+    do_AND_A_IX(inst) {
+        this.do_AND_A_REF(this.IX + inst.d);  // TODO (overflowチェック)
+    }
+
+    do_AND_A_IY(inst) {
+        this.do_AND_A_REF(this.IY + inst.d);  // TODO (overflowチェック)
+    }
+
+    do_OR_A_R(inst) {
+        const restmp = this.reg[A] | this.reg[inst.src];
+        this.updateFLG(restmp);
+        this.reg[A] = restmp & 0xff;
+    }
+
+    do_OR_A_N(inst) {
+        this.do_OR_A_R(inst);
+    }
+
+    do_OR_A_REF(addr) {
+        const restmp = (this.reg[A] | this.memory[addr]);
+        this.updateFLG(restmp);
+        this.reg[A] = restmp & 0xff;
+    }
+
+    do_OR_A_HL(inst) {
+        this.do_OR_A_REF(this.getHL());
+    }
+
+    do_OR_A_IX(inst) {
+        this.do_OR_A_REF(this.IX + inst.d);  // TODO (overflowチェック)
+    }
+
+    do_OR_A_IY(inst) {
+        this.do_OR_A_REF(this.IY + inst.d);  // TODO (overflowチェック)
+    }
+
+    do_XOR_A_R(inst) {
+        const restmp = this.reg[A] ^ this.reg[inst.src];
+        this.updateFLG(restmp);
+        this.reg[A] = restmp & 0xff;
+    }
+
+    do_XOR_A_N(inst) {
+        this.do_XOR_A_R(inst);
+    }
+
+    do_XOR_A_REF(addr) {
+        const restmp = (this.reg[A] ^ this.memory[addr]);
+        this.updateFLG(restmp);
+        this.reg[A] = restmp & 0xff;
+    }
+
+    do_XOR_A_HL(inst) {
+        this.do_XOR_A_REF(this.getHL());
+    }
+
+    do_XOR_A_IX(inst) {
+        this.do_XOR_A_REF(this.IX + inst.d);  // TODO (overflowチェック)
+    }
+
+    do_XOR_A_IY(inst) {
+        this.do_XOR_A_REF(this.IY + inst.d);  // TODO (overflowチェック)
+    }
+
+    do_CP_A_R(inst) {
+        const restmp = this.reg[A] - this.reg[inst.src];
+        this.updateFLG(restmp);
+    }
+
+    do_CP_A_N(inst) {
+        this.do_CP_A_R(inst);
+    }
+
+    do_CP_REF(addr) {
+        const restmp = (this.reg[A] - this.memory[addr]);
+        this.updateFLG(restmp);
+    }
+
+    do_CP_A_HL(inst) {
+        this.do_CP_REF(this.getHL());
+    }
+
+    do_CP_A_IX(inst) {
+        this.do_CP_REF(this.IX + inst.d);  // TODO (overflowチェック)
+    }
+
+    do_CP_A_IY(inst) {
+        this.do_CP_REF(this.IY + inst.d);  // TODO (overflowチェック)
+    }
+
+    do_INC_R(inst) {
+        const restmp = this.reg[inst.dest] + 1;
+        this.updateFLG(restmp);
+        this.reg[inst.dest] = restmp & 0xff;
+    }
+
+    do_INC_REF(addr) {
+        const restmp = this.memory[addr] + 1;
+        this.updateFLG(restmp);
+        this.memory[addr] = restmp & 0xff;
+    }
+
+    do_INC_REF_HL(inst) {
+        this.do_INC_REF(this.getHL());
+    }
+
+    do_INC_REF_IX(inst) {
+        this.do_INC_REF(this.IX + inst.d);  // TODO (overflowチェック)
+    }
+
+    do_INC_REF_IY(inst) {
+        this.do_INC_REF(this.IY + inst.d);  // TODO (overflowチェック)
+    }
+
+    do_DEC_R(inst) {
+        const restmp = this.reg[inst.dest] - 1;
+        this.updateFLG(restmp);
+        this.reg[dest] = restmp & 0xff;
+    }
+
+    do_DEC_REF(addr) {
+        const restmp = this.memory[addr] - 1;
+        this.updateFLG(restmp);
+        this.memory[addr] = restmp & 0xff;
+    }
+
+    do_DEC_REF_HL(inst) {
+        this.do_DEC_REF(this.getHL());
+    }
+
+    do_DEC_REF_IX(inst) {
+        this.do_DEC_REF(this.IX + inst.d);  // TODO (overflowチェック)
+    }
+
+    do_DEC_REF_IY(inst) {
+        this.do_DEC_REF(this.IY + inst.d);  // TODO (overflowチェック)
     }
 
     do_JP(inst) {
