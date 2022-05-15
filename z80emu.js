@@ -1663,6 +1663,72 @@ class Z80 {
         return (this.reg8[H] << 8) | this.reg8[L];
     }
 
+    setHL(val16) {
+        this.reg8[H] = (val16 >> 8) & 0xff;
+        this.reg8[L] = val16 & 0xff;
+    }
+
+    // 16bitレジスタの値を得る
+    //
+    // @param ss レジスタペアを表すビットパターン
+    // 00 = BC
+    // 01 = DE
+    // 10 = HL
+    // 11 = SP (regType === 0のとき)
+    // 11 = AF (regType !== 0のとき)
+    //
+    // @param regType .. ssの表すレジスタのタイプ
+    // regType === 0 ---> ss=11をSPとみなす
+    // regType !== 0 ---> ss=11をAFとみなす
+    getReg16(ss, regType) {
+        let val16 = 0;
+        switch (ss) {
+            case 0: {
+                val16 = (this.reg[B] << 8) | this.reg[C];
+                break;
+            }
+            case 1: {
+                val16 = (this.reg[D] << 8) | this.reg[E];
+                break;
+            }
+            case 2: {
+                val16 = (this.reg[H] << 8) | this.reg[L];
+                break;
+            }
+            case 3: {
+                if (regType === 0) {
+                    // SP
+                    val16 = this.SP;
+                } else {
+                    // AF
+                    val16 = (this.reg[A] << 8) | this.FLG;
+                }
+                break;
+            }            
+        }
+        return val16;
+    }
+
+    // 16bitレジスタに値をセット
+    //
+    // @param ss レジスタペアを表すビットパターン
+    // 00 = BC
+    // 01 = DE
+    // 10 = HL
+    // 11 = SP (regType === 0のとき)
+    // 11 = AF (regType !== 0のとき)
+    //
+    // @param regType .. ssの表すレジスタのタイプ
+    // regType === 0 ---> ss=11をSPとみなす
+    // regType !== 0 ---> ss=11をAFとみなす
+    //
+    // @param val16 destにセットする16bitの値
+    setReg16(ss, regType, val16) {
+        const valH = (val16 >> 8) & 0xff;
+        const valL = val & 0xff;
+        this.loadToReg16(ss, valH, valL, regType);
+    }
+
     // 16bitレジスタへ値をセット
     //
     // @param dest .. 代入先のレジスタを表すビットパターン
@@ -1681,14 +1747,17 @@ class Z80 {
             case 0: {   // BC
                 this.reg[B] = srcH;
                 this.reg[C] = srcL;
+                break;
             }
             case 1: {   // DE
                 this.reg[D] = srcH;
                 this.reg[E] = srcL;
+                break;
             }
             case 2: {   // HL
                 this.reg[H] = srcH;
                 this.reg[L] = srcL;
+                break;
             }
             case 3: { 
                 if (regType === 0) {
@@ -1699,6 +1768,7 @@ class Z80 {
                     this.reg[A] = srcH;
                     this.FLG = srcL;
                 }
+                break;
             }
         }    
     }
@@ -1722,14 +1792,17 @@ class Z80 {
             case 0: {   // BC
                 valueH = this.reg[B];
                 valueL = this.reg[C];
+                break;
             }
             case 1: {   // DE
                 valueH = this.reg[D];
                 valueL = this.reg[E];
+                break;
             }
             case 2: {   // HL
                 valueH = this.reg[H];
                 valueL = this.reg[L];
+                break;
             }
             case 3: {
                 if (regType === 0) {
@@ -1741,6 +1814,7 @@ class Z80 {
                     valueH = this.reg[A];
                     valueL = this.FLG;
                 }
+                break;
             }
             default:
                 return;
@@ -2111,7 +2185,7 @@ class Z80 {
     // 8bit算術、論理演算グループ
     // -----------------------------------
 
-    // 算術演算の結果をフラグに反映
+    // 8bit算術演算の結果をフラグに反映
     updateFLG(result) {
         // キャリーフラグ
         this.setCF(result >= 0x100);
@@ -2131,6 +2205,70 @@ class Z80 {
 
         // P/V（パリティ・オーバーフロー）フラグ
         // 
+    }
+
+    // 16bit算術演算の結果をフラグに反映(1)
+    // ADD HL, ss
+    // ADD IX, pp
+    // ADD IY, rr
+    // の3つの命令用
+    updateFLG16_ADD(result) {
+        // キャリーフラグ
+        this.setCF(result >= 0x10000);
+
+        // S, Z, Nフラグは変化なし
+
+        // TODO
+        // まだフラグの反映コードは不十分
+
+        // ハーフキャリーフラグ
+        // bit11からのキャリーがあればセット．そうでなければリセット
+    }
+
+    // 16bit算術演算の結果をフラグに反映(2)
+    // ADC HL, ss
+    // 専用
+    updateFLG16_ADC(result) {
+        // キャリーフラグ
+        this.setCF(result >= 0x10000);
+
+        // Sフラグ
+        this.setSF(result < 0);
+
+        // Zフラグ
+        this.setZF(result === 0);
+
+        // Nフラグ
+        this.setNF(false);
+
+        // TODO
+        // まだフラグの反映コードは不十分
+
+        // ハーフキャリーフラグ
+        // bit11からのキャリーがあればセット．そうでなければリセット
+    }
+
+    // 16bit算術演算の結果をフラグに反映(2)
+    // SBC HL, ss
+    // 専用
+    updateFLG16_SBC(result) {
+        // Sフラグ
+        this.setSF(result < 0);
+
+        // Zフラグ
+        this.setZF(result === 0);
+
+        // Nフラグ
+        this.setNF(true);
+
+        // TODO
+        // まだフラグの反映コードは不十分
+
+        // キャリーフラグ
+        // ボローがあればセット、そうでなければリセット
+
+        // ハーフキャリーフラグ
+        // bit11からのキャリーがあればセット．そうでなければリセット
     }
 
     do_ADD_A_R(inst) {
@@ -2411,47 +2549,69 @@ class Z80 {
     // 16bit算術演算グループ
     // -----------------------------------
     do_ADD_HL_ss(inst) {
-        
+        const src = this.getReg16(inst.src, 0);
+        const dest = this.getHL();
+        const restmp = dest + src;
+        this.updateFLG16_ADD(restmp);
+        this.setHL(restmp & 0xffff);
     }
 
     do_ADC_HL_ss(inst) {
-        
+        const src = this.getReg16(inst.src, 0);
+        const dest = this.getHL();
+        const restmp = dest + src + this.getCF();
+        this.updateFLG16_ADC(restmp);
+        this.setHL(restmp & 0xffff);        
     }
 
     do_SBC_HL_ss(inst) {
-        
+        const src = this.getReg16(inst.src, 0);
+        const dest = this.getHL();
+        const restmp = dest - src - this.getCF();
+        this.updateFLG16_SBC(restmp);
+        this.setHL(restmp & 0xffff);
     }
 
     do_ADD_IX_pp(inst) {
-        
+        const src = this.getReg16(inst.src, 0);
+        const dest = this.IX;
+        const restmp = dest + src;
+        this.updateFLG16_ADD(restmp);
+        this.IX = restmp & 0xffff;
     }
 
     do_ADD_IY_rr(inst) {
-        
+        const src = this.getReg16(inst.src, 0);
+        const dest = this.IY;
+        const restmp = dest + src;
+        this.updateFLG16_ADD(restmp);
+        this.IY = restmp & 0xffff;        
     }
 
     do_INC_ss(inst) {
-        
+        const val16 = (this.getReg16(inst.ss, 0) + 1) & 0xffff;
+        this.setReg16(inst.ss, 0, val16);
     }
 
     do_INC_IX(inst) {
-        
+        this.IX = (this.IX + 1) & 0xffff;
     }
 
     do_INC_IY(inst) {
-        
+        this.IY = (this.IY + 1) & 0xffff;
     }
 
     do_DEC_ss(inst) {
-        
+        const val16 = (this.getReg16(inst.ss, 0) - 1) & 0xffff;
+        this.setReg16(inst.ss, 0, val16);
     }
 
     do_DEC_IX(inst) {
-        
+        this.IX = (this.IX - 1) & 0xffff;
     }
 
     do_DEC_IY(inst) {
-        
+        this.IY = (this.IY - 1) & 0xffff;
     }
 
     // -----------------------------------
