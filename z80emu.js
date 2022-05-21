@@ -1940,6 +1940,49 @@ class Z80 {
         return (this.FLG & 0x80) === 0 ? false : true;
     }
 
+    // @param cc 条件ジャンプ・コール用のビットパターン
+    // 000 = NZ
+    // 001 = Z
+    // 010 = NC
+    // 011 = C
+    // 100 = PO (Parity Odd)
+    // 101 = PE (Parity Even)
+    // 110 = Plus
+    // 111 = Minus
+    testCC(cc) {
+        switch (cc) {
+            case 0: {
+                return !self.testZF();
+            }
+            case 1: {
+                return self.testZF();
+            }
+            case 2: {
+                return !self.testCF();
+            }
+            case 3: {
+                return self.testCF();
+            }
+            case 4: {
+                // TODO
+                return true;
+            }
+            case 5: {
+                // TODO
+                return true;
+            }
+            case 6: {
+                // SF=falseなら正
+                return !self.testSF();
+            }
+            case 7: {
+                // SF=trueなら負
+                return self.testSF();
+            }
+        }
+        return false;
+    }
+
     // ============================================
     // 各命令の実行
     // ============================================
@@ -2619,6 +2662,14 @@ class Z80 {
     // -----------------------------------
 
     do_JP(inst) {
+        this.PC = inst.nn;
+    }
+
+    do_JP_cc(inst) {
+        const cc = inst.cc;
+        if (self.testCC(cc)) {
+            this.PC = inst.nn;
+        }
     }
 
     // -----------------------------------
