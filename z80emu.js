@@ -4,7 +4,9 @@ const {
     A, B, C, D, E, H, L, 
     BC, DE, HL, SP, AF,
     xrct3, xrct2, 
-    toRegName} = require('./Utils');
+    toRegName,
+    calcRelAddr_8
+} = require('./Utils');
 
 // 8bitロードグループ
 const LD_R_R = 0x40;
@@ -2670,6 +2672,10 @@ class Z80 {
         if (self.testCC(cc)) {
             this.PC = inst.nn;
         }
+    }
+
+    do_JR_e(inst) {
+        this.PC = calcRelAddr_8(this.PC, inst.e_2);
     }
 
     // -----------------------------------
