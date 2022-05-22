@@ -2675,7 +2675,13 @@ class Z80 {
     }
 
     do_JR_e(inst) {
-        this.PC = calcRelAddr_8(this.PC, inst.e_2);
+        // ジャンプ元のアドレス
+        const srcAddr = this.PC + 2;    // +2に注意（PCは命令をフェッチした時点で、次の命令の先頭になっているため）
+        
+        // ジャンプ先のアドレス
+        const destAddr = calcRelAddr_8(srcAddr, inst.e_2);
+
+        this.PC = destAddr;
     }
 
     // -----------------------------------
