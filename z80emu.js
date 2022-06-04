@@ -2684,6 +2684,51 @@ class Z80 {
         this.PC = destAddr;
     }
 
+    do_JR_C_e(inst) {
+        if (self.testCF()) {
+            this.do_JR_e(inst);
+        }
+    }
+
+    do_JR_NC_e(inst) {
+        if (!self.testCF()) {
+            this.do_JR_e(inst);
+        }
+    }
+
+    do_JR_Z_e(inst) {
+        if (self.testZF()) {
+            this.do_JR_e(inst);
+        }
+    }
+
+    do_JR_NZ_e(inst) {
+        if (!self.testZF()) {
+            this.do_JR_e(inst);
+        }
+    }
+
+    do_JP_HL(inst) {
+        this.PC = getHL();
+    }
+
+    do_JP_IX(inst) {
+        this.PC = this.IX;
+    }
+
+    do_JP_IY(inst) {
+        this.PC = this.IY;
+    }
+
+    do_DJNZ(inst) {
+        // （注）DJNZではフラグは変化しない
+        const newB = this.reg8[B] - 1;
+        this.reg8[B] = newB;
+        if (newB !== 0) {
+            this.do_JR_e(inst);
+        }
+    }
+
     // -----------------------------------
     // コール、リターングループ
     // -----------------------------------
