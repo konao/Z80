@@ -2190,6 +2190,19 @@ class Z80 {
         }
     }
 
+    // 命令にはないが、CALL系命令で使うので用意しておく
+    // （ヘルパーメソッド的）
+    do_PUSH_PC(inst) {
+        if (this.SP >= 2) {
+            this.SP = this.SP - 2;
+            this.memory[this.SP] = (this.PC & 0xff);
+            this.memory[this.SP+1] = ((this.PC & 0xff00) >> 8);
+        } else {
+            // error
+            throw "stack underflow";
+        }
+    }
+
     do_POP_qq(inst) {
         if (this.SP <= 0xfffe) {
             const srcL = this.memory[this.SP];
@@ -2219,6 +2232,20 @@ class Z80 {
             const srcL = this.memory[this.SP];
             const srcH = this.memory[this.SP+1];
             this.IY = (srcH << 8) | srcL;
+            this.SP = this.SP + 2;
+        } else {
+            // error
+            throw "stack overflow";
+        }
+    }
+
+    // 命令にはないが、RET系命令で使うので用意しておく
+    // （ヘルパーメソッド的）
+    do_POP_PC(inst) {
+        if (this.SP <= 0xfffe) {
+            const srcL = this.memory[this.SP];
+            const srcH = this.memory[this.SP+1];
+            this.PC = (srcH << 8) | srcL;
             this.SP = this.SP + 2;
         } else {
             // error
@@ -2732,6 +2759,36 @@ class Z80 {
     // -----------------------------------
     // コール、リターングループ
     // -----------------------------------
+    do_CALL_nn(inst) {
+        this.do_PUSH_PC(inst);
+        this.PC = inst.nn;
+    }
+
+    do_CALL_cc_nn(inst) {
+        const cc = inst.cc;
+        if (self.testCC(cc)) {
+            this.do_CALL_nn(inst);
+        }
+    }
+
+    do_RET(inst) {
+        this.do_POP_PC(inst);
+    }
+
+    do_RET_cc(inst) {
+        const cc = inst.cc;
+        if (self.testCC(cc)) {
+            this.do_RET(inst);
+        }
+    }
+
+    do_RETI(inst) {
+        // do nothing
+    }
+
+    do_RST(inst) {
+        // do nothing
+    }
 
     // -----------------------------------
     // ローテイト、シフトグループ
