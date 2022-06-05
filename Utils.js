@@ -48,7 +48,7 @@ const toRegName = (x) => {
 
 // xの2の補数を返す
 // (xは8bit数値とみなす)
-const get2sCmpl_8(x) => {
+const get2sCmpl_8 = (x) => {
     const x_8 = x & 0xff;   // 8bitに制限
     return (x_8 ^ 0xff) + 1;    // ^はxorの演算子
 }
