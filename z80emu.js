@@ -1633,17 +1633,62 @@ class Z80 {
         const decodedInst = decode(this.PC);
         switch (decodedInst.inst) {
             case LD_R_R: {
-                this.do_LD_R_R();
+                this.do_LD_R_R(inst);
             }
             case LD_R_N: {
-                this.do_LD_R_N();
+                this.do_LD_R_N(inst);
+            }
+            case LD_R_HL: {
+                this.do_LD_R_HL(inst);
+            }
+            case LD_R_IX: {
+                this.do_LD_R_IX(inst);
+            }
+            case LD_R_IY: {
+                this.do_LD_R_IY(inst);
+            }
+            case LD_HL_R: {
+                this.do_LD_HL_R(inst);
+            }
+            case LD_IX_R: {
+                this.do_LD_IX_R(inst);
+            }
+            case LD_IY_R: {
+                this.do_LD_IY_R(inst);
+            }
+            case LD_HL_N: {
+                this.do_LD_HL_N(inst);
+            }
+            case LD_IX_N: {
+                this.do_LD_IX_N(inst);
+            }
+            case LD_IY_N: {
+                this.do_LD_IY_N(inst);
+            }
+            case LD_A_BC: {
+                this.do_LD_A_BC(inst);
+            }
+            case LD_A_DE: {
+                this.do_LD_A_DE(inst);
+            }
+            case LD_A_NN: {
+                this.do_LD_A_NN(inst);
+            }
+            case LD_BC_A: {
+                this.do_LD_BC_A(inst);
+            }
+            case LD_DE_A: {
+                this.do_LD_DE_A(inst);
+            }
+            case LD_NN_A: {
+                this.do_LD_NN_A(inst);
             }
             case NOP: {
-                this.do_NOP();
+                this.do_NOP(inst);
                 break;
             }
             case JP: {
-                this.do_JP();
+                this.do_JP(inst);
             }
         }
         waitCycles(decodedInst.cycles);
